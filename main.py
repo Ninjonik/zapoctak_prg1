@@ -1,3 +1,9 @@
+"""
+Jednoduchá kalkulačka na lineárnu algebru.
+Zápočtový program, zimný semester 2025/2026, Programovanie 1.
+Peter Zaťko
+"""
+
 from typing import Iterable, Iterator, Tuple, Union
 from numbers import Number
 

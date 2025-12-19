@@ -4,7 +4,7 @@ Zápočtový program, zimný semester 2025/2026, Programovanie 1.
 Peter Zaťko
 """
 
-from typing import Iterable, Iterator, Tuple, Union
+from typing import Iterable, Iterator, Tuple, Union, List
 from numbers import Number
 
 
@@ -138,14 +138,14 @@ class Matrix:
             return None
 
         if isinstance(key, int):
-            if not (1 <= key < self.rows):
-                raise IndexError("Row index out of range")
+            if not (1 <= key <= self.rows):
+                raise IndexError(f"Row index {key} out of range")
             return tuple(self._data[key - 1])  # Apoužívame indexovanie od 1
 
         if isinstance(key, tuple):
             row, col = key
             if not (1 <= row <= self.rows) or not (1 <= col <= self.cols):
-                raise IndexError("Index out of range")
+                raise IndexError(f"Index [{row}][{col}] out of range")
             return self._data[row - 1][col - 1]  # používame indexovanie od 1
 
         raise TypeError("Invalid key type")
@@ -159,7 +159,7 @@ class Matrix:
         if isinstance(key, int):
             value_list = list(value) # explicitná kópia
             if not (1 <= key <= self.rows):
-                raise IndexError(f"Index [{self.rows}] of the row out of range of the matrix with shape {self.rows}*{self.cols}")
+                raise IndexError(f"Index [{key}] of the row out of range of the matrix with shape {self.rows}*{self.cols}")
             if len(value_list) != self.cols:
                 raise ValueError(f"Row length mismatch, given: {len(value_list)}, expected: {self.cols}")
             self._data[key - 1] = value_list # používame indexovanie od 1
@@ -167,7 +167,7 @@ class Matrix:
         elif isinstance(key, tuple):
             row, col = key
             if not (1 <= row <= self.rows) or not (1 <= col <= self.cols):
-                raise IndexError(f"Index [{self.rows}][{self.cols}] of the row out of range of the matrix with shape {self.rows}*{self.cols}")
+                raise IndexError(f"Index [{row}][{col}] of the row out of range of the matrix with shape {self.rows}*{self.cols}")
             self._data[row - 1][col - 1] = value  # používame indexovanie od 1
 
         else:
@@ -185,7 +185,8 @@ class Matrix:
             yield tuple(row)  # immutable row
 
     def copy(self) -> "Matrix":
-        pass
+        new_matrix = Matrix.from_matrix(self)
+        return new_matrix
 
     # ===== Charakterizácia matice =====
     def rank(self) -> int:
@@ -222,7 +223,9 @@ class Matrix:
         if not self.is_square:
             return False
 
-        return self.is_square and self == self.transpose()
+        transposed_matrix = Matrix.from_matrix(self)
+        transposed_matrix.transpose()
+        return self.is_square and self == transposed_matrix
 
     # ===== Interné kontroly =====
     def _check_same_shape(self, other: "Matrix") -> None:
@@ -232,24 +235,148 @@ class Matrix:
         pass
 
     # ===== Operácie na matici =====
-    def transpose(self) -> "Matrix":
+    def transpose(self) -> None:
         """
-        Transponuje maticu a vráti novú. (Netransponuje na mieste, namiesto toho vytvorí novú maticu.)
-        :return Nová transponovaná matica na základe tej aktuálnej.
+        Transponuje maticu na mieste.
 
         Napríklad:
             matica = Matrix([[1, 2, 3], [4, 5, 6]])
-            print(matica.transpose())
+            matica.transpose()
+            print(matica)
             ( 1 4 )
             ( 2 5 )
             ( 3 6 )
         """
-        tranposed_matrix = Matrix.zeros(self.cols, self.rows)
-        for row in range(1, self.rows + 1):
-            for col in range(1, self.cols + 1):
-                tranposed_matrix[col, row] = self[row, col]
 
-        return tranposed_matrix
+        if self.is_regular:
+            for row in range(1, self.rows + 1):
+                # row + 1, aby sme zabránili dvojitému prehadzovaniu
+                for col in range(row + 1, self.cols + 1):
+                    self[col, row], self[row, col] = self[row, col], self[col, row]
+        else:
+            # Potrebujeme zmeniť rozmery matice
+            new_data = [[0 for col in range(self.rows)] for row in range(self.cols)]
+            for row in range(1, self.rows + 1):
+                for col in range(1, self.cols + 1):
+                    new_data[col - 1][row - 1] = self[row, col]
+            self._data = new_data
+
+    def is_row_empty(self, row) -> bool:
+        if self.empty or row < 1 or row > self.rows:
+            return False
+
+        empty = True
+        for col in self[row]:
+            if col != 0:
+                empty = False
+                break
+
+        return empty
+
+    def remove_row(self, row) -> None:
+        # posuň všetky riadky zdola nahor
+        for move_up_row in range(row + 1, self.rows + 1):
+            self[move_up_row - 1] = tuple(self[move_up_row])
+
+        # zmenši rozmery matice o prázdny riadok
+        self._data = self._data[:self.rows - 1]
+
+    def remove_null_rows(self) -> None:
+        if self.empty:
+            return None
+
+        empty_rows = 0
+        for row in range(1, self.rows + 1):
+            is_empty = self.is_row_empty(row)
+            # posuň všetky riadky zdola nahor
+            if is_empty:
+                empty_rows += 1
+                self.remove_row(row)
+
+    def get_pivot(self, row) -> Union[Number, None]:
+        if self.empty or row > self.rows:
+            return None
+
+        for i in range(1, self.cols + 1):
+            possible_pivot = self[row, i]
+            if possible_pivot != 0:
+                return i
+
+    def get_pivots(self) -> List[int]:
+        pivots = []
+        for row in range(1, self.rows + 1):
+            pivot = self.get_pivot(row)
+            pivots.append(pivot - 1)
+
+        return pivots
+
+    def sort_by_pivots(self) -> None:
+        pivots = self.get_pivots()
+        # zoraď riadky podľa počtu pivotov
+        for row1 in range(1, self.rows + 1):
+            pivot1 = pivots[row1 - 1]
+
+            for row2 in range(1, self.rows + 1):
+                pivot2 = pivots[row2 - 1]
+
+                if pivot2 < pivot1:
+                    self.swap_rows(row1, row2)
+
+    def eliminate_pivots(self, base, below = True) -> None:
+        if base > self.rows:
+            return None
+
+        base_pivot = self.get_pivot(base)
+        if not base_pivot:
+            return None
+
+        pivot = self[base, base_pivot]
+
+        # Naškáluj riadok tak, aby bol pivot 1
+        if pivot != 1:
+            self.scale_row(base, 1 / pivot)
+
+        if below:
+            for secondary in range(base + 1, self.rows + 1):
+                secondary_pivot = self.get_pivot(secondary)
+                if secondary_pivot == base_pivot:
+                    self.subtract_row(secondary, base, self[secondary, secondary_pivot] / self[base, base_pivot])
+        else:
+            for secondary in range(1, base):
+                secondary_pivot = self.get_pivot(secondary)
+                self.subtract_row(secondary, base, self[secondary, base_pivot] / self[base, base_pivot])
+
+    def ref(self) -> None:
+        """
+        Prevedie maticu do riadkovo-odstupňovaného tvaru = row echelon form (REF).
+        """
+        if self.empty:
+            return None
+
+        # odstráň všetky nulové riadky
+        self.remove_null_rows()
+
+        # nájdi pivoty pre každý riadok
+        pivots = self.get_pivots()
+
+        # zoraď riadky podľa počtu pivotov
+        self.sort_by_pivots()
+
+        # eliminuj všetky nenulové pozície pod pivotom v aktuálnom riadku
+        for row in range(1, self.rows + 1):
+            self.eliminate_pivots(row)
+
+    def rref(self) -> None:
+        """
+        Prevedie maticu do redukovaného riadkovo-odstupňovaného tvaru = reduced row echelon form (RREF).
+        """
+        # preveď maticu do REF
+        self.ref()
+
+        # eliminuj všetky nenulové pozície nad pivotom v aktuálnom riadku
+        for row in range(self.rows, 0, -1):
+            self.eliminate_pivots(row, False)
+
 
     def invert(self) -> "Matrix":
         pass
@@ -301,24 +428,63 @@ class Matrix:
         pass
 
     # ===== Elementárne riadkové úpravy (in-place) =====
-    def add_row(self, source: int, destination: int, multiple: Number) -> None:
-        pass
+    def add_row(self, base: int, operand: int, multiple: Number = 1) -> None:
+        """
+        Pripočíta ku riadku destination riadok source.
+        :param base: Riadok, ku ktorému sa má pripočítať iný riadok.
+        :param operand: Riadok, ktorý budeme pripočívať ku inému riadku.
+        :param multiple: Skalár vyjadrujúci násobok riadku source.
+        :return: None
+        """
+        if self.empty or operand > self.rows or base > self.rows:
+            return None
 
-    def subtract_row(self, source: int, destination: int, multiple: Number) -> None:
-        return self.add_row(source, destination, -1 * multiple)
+        for col in range(1, self.cols + 1):
+            self[base, col] += multiple * self[operand, col]
 
-    def scale_row(self, source: int, multiple: Number) -> None:
-        pass
+    def subtract_row(self, base: int, operand: int, multiple: Number) -> None:
+        """
+        Odpočíta od riadku destination riadok source. Je to ekvivalentné add_row s multiple = -1.
+        :param base: Riadok, od ktorého sa má odpočítať iný riadok.
+        :param operand: Riadok, ktorý budeme odpočítavať od iného riadku.
+        :param multiple: Skalár vyjadrujúci násobok riadku source.
+        :return: None
+        """
+        return self.add_row(base, operand, -1 * multiple)
 
-    def swap_rows(self, source: int, destination: int) -> None:
-        pass
+    def scale_row(self, base: int, multiple: Number) -> None:
+        """
+        Vynásobí riadok nenulovým číslom.
+        :param base: Riadok, nad ktorým chceme vykonať operáciu.
+        :param multiple: Skalár vyjadrujúci násobok riadku source.
+        :return: None
+        """
+        if self.empty or base > self.rows or multiple == 0:
+            return None
+
+        for col in range(1, self.cols + 1):
+            self[base, col] = multiple * self[base, col]
+
+    def swap_rows(self, base: int, secondary: int) -> None:
+        """
+        Vymení pozície dvoch riadkov.
+        :param secondary: Index 1. riadku pre výmenu.
+        :param base: Index 2. riadku pre výmenu.
+        :return: None
+        """
+        if self.empty or secondary > self.rows or base > self.rows:
+            return None
+
+        for col in range(1, self.cols + 1):
+            self[secondary, col], self[base, col] = self[base, col], self[secondary, col]
 
 
 class InputHandler:
     def __init__(self) -> None:
         pass
 
-symetricka_matica = Matrix([[1, 2, 1], [1, 2, 1], [1, 2, 1]])
+"""
+symetricka_matica = Matrix([[1, 1, -1], [1, 2, 0], [-1, 0, 5]])
 matica = Matrix([[6, 3, 1], [3, 2, 9], [7, -4, 0]])
 jednotkova_matica=Matrix.identity(4)
 nulova_matica=Matrix.zeros(3, 5)
@@ -337,4 +503,13 @@ print(symetricka_matica.is_symmetric)
 print(matica.is_symmetric)
 print(jednotkova_matica.is_symmetric)
 print(nulova_matica.is_symmetric)
-
+"""
+# Case 2: Matrix with a true zero row
+m2 = Matrix([
+    [1, 1, 1],
+    [0, 0, 0],
+    [0, 1, 2]
+])
+# This will likely raise: TypeError: unsupported operand type(s) for -: 'NoneType' and 'int'
+m2.rref()
+print("Case 2 (Zero Row):\n", m2)

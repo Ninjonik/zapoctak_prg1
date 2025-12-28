@@ -1,6 +1,7 @@
 """
 Unit tests for the Matrix class.
 Tests all functionality including edge cases and Gauss-Jordan elimination (RREF).
+Uses numpy as a source of truth for matrix operations.
 
 To run the tests:
 python -m unittest test_matrix -v
@@ -8,7 +9,22 @@ python -m unittest test_matrix -v
 """
 
 import unittest
+import numpy as np
 from main import Matrix
+
+
+def matrix_to_numpy(matrix):
+    """Convert a Matrix object to a numpy array."""
+    if matrix.empty:
+        return np.array([])
+    return np.array([list(matrix[i]) for i in range(1, matrix.rows + 1)])
+
+
+def numpy_to_matrix(array):
+    """Convert a numpy array to a Matrix object."""
+    if array.size == 0:
+        return Matrix([])
+    return Matrix(array.tolist())
 
 
 class TestMatrixConstruction(unittest.TestCase):
@@ -208,8 +224,25 @@ class TestMatrixTranspose(unittest.TestCase):
 
     def test_transpose_rectangular(self):
         """Test transpose of rectangular matrix."""
+        # Create test matrix
         m = Matrix([[1, 2, 3], [4, 5, 6]])
+
+        # Convert to numpy array
+        np_m = matrix_to_numpy(m)
+
+        # Compute expected result using numpy
+        expected_result = np.transpose(np_m)
+
+        # Transpose the matrix
         m.transpose()
+
+        # Convert result to numpy for comparison
+        np_result = matrix_to_numpy(m)
+
+        # Compare results
+        np.testing.assert_array_equal(np_result, expected_result)
+
+        # Additional checks
         self.assertEqual(m.shape, (3, 2))
         self.assertEqual(m[1, 1], 1)
         self.assertEqual(m[1, 2], 4)
@@ -218,8 +251,25 @@ class TestMatrixTranspose(unittest.TestCase):
 
     def test_transpose_square(self):
         """Test transpose of square matrix."""
+        # Create test matrix
         m = Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+
+        # Convert to numpy array
+        np_m = matrix_to_numpy(m)
+
+        # Compute expected result using numpy
+        expected_result = np.transpose(np_m)
+
+        # Transpose the matrix
         m.transpose()
+
+        # Convert result to numpy for comparison
+        np_result = matrix_to_numpy(m)
+
+        # Compare results
+        np.testing.assert_array_equal(np_result, expected_result)
+
+        # Additional checks
         self.assertEqual(m[1, 1], 1)
         self.assertEqual(m[1, 2], 4)
         self.assertEqual(m[1, 3], 7)
@@ -227,9 +277,26 @@ class TestMatrixTranspose(unittest.TestCase):
 
     def test_transpose_symmetric(self):
         """Test transpose of symmetric matrix."""
+        # Create test matrix
         m = Matrix([[1, 2], [2, 3]])
         original = m.copy()
+
+        # Convert to numpy array
+        np_m = matrix_to_numpy(m)
+
+        # Compute expected result using numpy
+        expected_result = np.transpose(np_m)
+
+        # Transpose the matrix
         m.transpose()
+
+        # Convert result to numpy for comparison
+        np_result = matrix_to_numpy(m)
+
+        # Compare results
+        np.testing.assert_array_equal(np_result, expected_result)
+
+        # For symmetric matrices, the transpose should equal the original
         self.assertEqual(m, original)
 
 
@@ -344,8 +411,15 @@ class TestREF(unittest.TestCase):
 
     def test_ref_simple(self):
         """Test REF on a simple matrix."""
+        # Create test matrix
         m = Matrix([[2, 1, -1], [-3, -1, 2], [-2, 1, 2]])
+
+        # Make a copy for numpy operations
+        np_m = matrix_to_numpy(m)
+
+        # Perform REF operation
         m.ref()
+
         # Check that it's in REF form (pivots are left of lower row pivots)
         pivot1 = m.get_pivot(1)
         if m.rows >= 2:
@@ -353,18 +427,45 @@ class TestREF(unittest.TestCase):
             if pivot1 is not None and pivot2 is not None:
                 self.assertLess(pivot1, pivot2)
 
+        # Additional verification: check that all elements below pivots are zero
+        for row in range(2, m.rows + 1):
+            for prev_row in range(1, row):
+                pivot_col = m.get_pivot(prev_row)
+                if pivot_col is not None:
+                    self.assertEqual(m[row, pivot_col], 0)
+
     def test_ref_already_ref(self):
         """Test REF on matrix already in REF."""
+        # Create test matrix already in REF
         m = Matrix([[1, 2, 3], [0, 1, 4], [0, 0, 1]])
+
+        # Make a copy for comparison
+        original = m.copy()
+
+        # Perform REF operation
         m.ref()
+
+        # The matrix should remain essentially the same (pivots might be normalized)
         self.assertEqual(m[1, 1], 1)
         self.assertEqual(m[2, 2], 1)
         self.assertEqual(m[3, 3], 1)
 
+        # Check that the structure is preserved
+        for row in range(1, m.rows + 1):
+            pivot_col = m.get_pivot(row)
+            if pivot_col is not None:
+                # Check that all elements below the pivot are zero
+                for below_row in range(row + 1, m.rows + 1):
+                    self.assertEqual(m[below_row, pivot_col], 0)
+
     def test_ref_with_zero_row(self):
         """Test REF with zero row."""
+        # Create test matrix with a zero row
         m = Matrix([[1, 2, 3], [0, 0, 0], [4, 5, 6]])
+
+        # Perform REF operation
         m.ref()
+
         # Zero rows should be removed
         self.assertEqual(m.rows, 2)
 
@@ -374,35 +475,65 @@ class TestRREF(unittest.TestCase):
 
     def test_rref_identity(self):
         """Test RREF on identity matrix."""
+        # Create identity matrix
         m = Matrix.identity(3)
+
+        # Make a copy for numpy operations
+        np_m = matrix_to_numpy(m)
+
+        # Perform RREF operation
         m.rref()
+
+        # Identity matrix should remain unchanged after RREF
         expected = Matrix.identity(3)
         self.assertEqual(m, expected)
 
     def test_rref_simple_2x2(self):
         """Test RREF on simple 2x2 matrix."""
+        # Create test matrix
         m = Matrix([[2, 4], [1, 3]])
+
+        # Make a copy for numpy operations
+        np_m = matrix_to_numpy(m)
+
+        # Perform RREF operation
         m.rref()
+
         # Should result in identity or RREF form
         self.assertEqual(m[1, 1], 1)
         self.assertEqual(m[2, 2], 1)
         self.assertEqual(m[1, 2], 0)
         self.assertEqual(m[2, 1], 0)
 
+        # Additional verification: check that the matrix is in RREF form
+        # 1. All pivots are 1
+        # 2. All other elements in pivot columns are 0
+        for row in range(1, m.rows + 1):
+            pivot_col = m.get_pivot(row)
+            if pivot_col is not None:
+                self.assertEqual(m[row, pivot_col], 1)
+                for other_row in range(1, m.rows + 1):
+                    if other_row != row:
+                        self.assertEqual(m[other_row, pivot_col], 0)
+
     def test_rref_3x3_full_rank(self):
         """Test RREF on 3x3 full rank matrix."""
+        # Create test matrix
         m = Matrix([[1, 2, 3], [2, 5, 7], [3, 5, 8]])
+
+        # Make a copy for numpy operations
+        np_m = matrix_to_numpy(m)
+
+        # Perform RREF operation
         m.rref()
+
         # Should have 1s on diagonal and 0s elsewhere
         self.assertEqual(m[1, 1], 1)
-        self.assertEqual(m[2, 2], 1)
-        self.assertEqual(m[3, 3], 1)
         self.assertEqual(m[1, 2], 0)
-        self.assertEqual(m[1, 3], 0)
+        self.assertEqual(m[1, 3], 1)
         self.assertEqual(m[2, 1], 0)
-        self.assertEqual(m[2, 3], 0)
-        self.assertEqual(m[3, 1], 0)
-        self.assertEqual(m[3, 2], 0)
+        self.assertEqual(m[2, 2], 1)
+        self.assertEqual(m[2, 3], 1)
 
     def test_rref_rectangular_full_column_rank(self):
         """Test RREF on rectangular matrix with full column rank."""
@@ -586,6 +717,324 @@ class TestRREF(unittest.TestCase):
         self.assertLess(m.rows, 5)
 
 
+class TestArithmeticOperations(unittest.TestCase):
+    """Test arithmetic operations on matrices."""
+
+    def test_right_addition(self):
+        """Test right addition (scalar + matrix)."""
+        # This tests the __radd__ method
+        # Create test matrix
+        m = Matrix([[1, 2], [3, 4]])
+
+        # Convert to numpy array
+        np_m = matrix_to_numpy(m)
+
+        # For addition, scalar + matrix should be equivalent to matrix + scalar
+        # which is equivalent to adding the scalar to each element
+        scalar = 5
+        expected_result = scalar + np_m
+
+        # Compute actual result using Matrix class
+        # This should call __radd__ since the left operand is not a Matrix
+        actual_result = scalar + m
+
+        # Convert actual result to numpy for comparison
+        np_actual = matrix_to_numpy(actual_result)
+
+        # Compare results
+        np.testing.assert_array_equal(np_actual, expected_result)
+
+    def test_right_subtraction(self):
+        """Test right subtraction (scalar - matrix)."""
+        # This tests the __rsub__ method
+        # Create test matrix
+        m = Matrix([[1, 2], [3, 4]])
+
+        # Convert to numpy array
+        np_m = matrix_to_numpy(m)
+
+        # For subtraction, scalar - matrix is different from matrix - scalar
+        scalar = 10
+        expected_result = scalar - np_m
+
+        # Compute actual result using Matrix class
+        # This should call __rsub__ since the left operand is not a Matrix
+        actual_result = scalar - m
+
+        # Convert actual result to numpy for comparison
+        np_actual = matrix_to_numpy(actual_result)
+
+        # Compare results
+        np.testing.assert_array_equal(np_actual, expected_result)
+
+    def test_matrix_addition(self):
+        """Test matrix addition."""
+        # Create test matrices
+        m1 = Matrix([[1, 2], [3, 4]])
+        m2 = Matrix([[5, 6], [7, 8]])
+
+        # Convert to numpy arrays
+        np_m1 = matrix_to_numpy(m1)
+        np_m2 = matrix_to_numpy(m2)
+
+        # Compute expected result using numpy
+        expected_result = np_m1 + np_m2
+
+        # Compute actual result using Matrix class
+        actual_result = m1 + m2
+
+        # Convert actual result to numpy for comparison
+        np_actual = matrix_to_numpy(actual_result)
+
+        # Compare results
+        np.testing.assert_array_equal(np_actual, expected_result)
+
+        # Test right addition (should be the same as left addition)
+        actual_result_right = m2 + m1
+        np_actual_right = matrix_to_numpy(actual_result_right)
+        np.testing.assert_array_equal(np_actual_right, expected_result)
+
+    def test_matrix_subtraction(self):
+        """Test matrix subtraction."""
+        # Create test matrices
+        m1 = Matrix([[10, 20], [30, 40]])
+        m2 = Matrix([[5, 6], [7, 8]])
+
+        # Convert to numpy arrays
+        np_m1 = matrix_to_numpy(m1)
+        np_m2 = matrix_to_numpy(m2)
+
+        # Compute expected result using numpy
+        expected_result = np_m1 - np_m2
+
+        # Compute actual result using Matrix class
+        actual_result = m1 - m2
+
+        # Convert actual result to numpy for comparison
+        np_actual = matrix_to_numpy(actual_result)
+
+        # Compare results
+        np.testing.assert_array_equal(np_actual, expected_result)
+
+    def test_scalar_multiplication(self):
+        """Test scalar multiplication."""
+        # Create test matrix
+        m = Matrix([[1, 2], [3, 4]])
+        scalar = 2
+
+        # Convert to numpy array
+        np_m = matrix_to_numpy(m)
+
+        # Compute expected result using numpy
+        expected_result = np_m * scalar
+
+        # Compute actual result using Matrix class
+        actual_result = m * scalar
+
+        # Convert actual result to numpy for comparison
+        np_actual = matrix_to_numpy(actual_result)
+
+        # Compare results
+        np.testing.assert_array_equal(np_actual, expected_result)
+
+        # Test right multiplication
+        actual_result_right = scalar * m
+        np_actual_right = matrix_to_numpy(actual_result_right)
+        np.testing.assert_array_equal(np_actual_right, expected_result)
+
+    def test_matrix_multiplication(self):
+        """Test matrix multiplication."""
+        # Create test matrices
+        m1 = Matrix([[1, 2], [3, 4]])
+        m2 = Matrix([[5, 6], [7, 8]])
+
+        # Convert to numpy arrays
+        np_m1 = matrix_to_numpy(m1)
+        np_m2 = matrix_to_numpy(m2)
+
+        # Compute expected result using numpy
+        expected_result = np.matmul(np_m1, np_m2)
+
+        # Compute actual result using Matrix class
+        actual_result = m1 @ m2
+
+        # Convert actual result to numpy for comparison
+        np_actual = matrix_to_numpy(actual_result)
+
+        # Compare results
+        np.testing.assert_array_equal(np_actual, expected_result)
+
+    def test_matrix_multiplication_different_shapes(self):
+        """Test matrix multiplication with different shapes."""
+        # Create test matrices
+        m1 = Matrix([[1, 2, 3], [4, 5, 6]])  # 2x3
+        m2 = Matrix([[7, 8], [9, 10], [11, 12]])  # 3x2
+
+        # Convert to numpy arrays
+        np_m1 = matrix_to_numpy(m1)
+        np_m2 = matrix_to_numpy(m2)
+
+        # Compute expected result using numpy
+        expected_result = np.matmul(np_m1, np_m2)
+
+        # Compute actual result using Matrix class
+        actual_result = m1 @ m2
+
+        # Convert actual result to numpy for comparison
+        np_actual = matrix_to_numpy(actual_result)
+
+        # Compare results
+        np.testing.assert_array_equal(np_actual, expected_result)
+
+
+class TestMatrixInversion(unittest.TestCase):
+    """Test matrix inversion."""
+
+    def test_invert_identity(self):
+        """Test inverting an identity matrix."""
+        # Create identity matrix
+        m = Matrix.identity(3)
+
+        # Convert to numpy array
+        np_m = matrix_to_numpy(m)
+
+        # Compute expected result using numpy
+        expected_result = np.linalg.inv(np_m)
+
+        # Compute actual result using Matrix class
+        actual_result = m.invert()
+
+        # Convert actual result to numpy for comparison
+        np_actual = matrix_to_numpy(actual_result)
+
+        # Compare results
+        np.testing.assert_array_almost_equal(np_actual, expected_result)
+
+    def test_invert_simple(self):
+        """Test inverting a simple matrix."""
+        # Create test matrix
+        m = Matrix([[4, 7], [2, 6]])
+
+        # Convert to numpy array
+        np_m = matrix_to_numpy(m)
+
+        # Compute expected result using numpy
+        expected_result = np.linalg.inv(np_m)
+
+        # Compute actual result using Matrix class
+        actual_result = m.invert()
+
+        # Convert actual result to numpy for comparison
+        np_actual = matrix_to_numpy(actual_result)
+
+        # Compare results
+        np.testing.assert_array_almost_equal(np_actual, expected_result)
+
+    def test_invert_singular(self):
+        """Test inverting a singular matrix."""
+        # Create singular matrix
+        m = Matrix([[1, 2], [2, 4]])
+
+        # Compute actual result using Matrix class
+        with self.assertRaises(ValueError):
+            m.invert()
+
+
+class TestMatrixRank(unittest.TestCase):
+    """Test matrix rank calculation."""
+
+    def test_rank_full_rank(self):
+        """Test rank of a full rank matrix."""
+        # Create test matrix
+        m = Matrix([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+
+        # Convert to numpy array
+        np_m = matrix_to_numpy(m)
+
+        # Compute expected result using numpy
+        expected_result = np.linalg.matrix_rank(np_m)
+
+        # Compute actual result using Matrix class
+        actual_result = m.rank()
+
+        # Compare results
+        self.assertEqual(actual_result, expected_result)
+
+    def test_rank_deficient(self):
+        """Test rank of a rank-deficient matrix."""
+        # Create test matrix
+        m = Matrix([[1, 2, 3], [2, 4, 6], [3, 6, 9]])
+
+        # Convert to numpy array
+        np_m = matrix_to_numpy(m)
+
+        # Compute expected result using numpy
+        expected_result = np.linalg.matrix_rank(np_m)
+
+        # Compute actual result using Matrix class
+        actual_result = m.rank()
+
+        # Compare results
+        self.assertEqual(actual_result, expected_result)
+
+    def test_rank_empty(self):
+        """Test rank of an empty matrix."""
+        # Create empty matrix
+        m = Matrix([])
+
+        # Compute actual result using Matrix class
+        actual_result = m.rank()
+
+        # Rank of empty matrix should be 0
+        self.assertEqual(actual_result, 0)
+
+
+class TestMatrixRegularity(unittest.TestCase):
+    """Test matrix regularity."""
+
+    def test_is_regular_true(self):
+        """Test a regular (invertible) matrix."""
+        # Create test matrix
+        m = Matrix([[1, 2], [3, 4]])
+
+        # Convert to numpy array
+        np_m = matrix_to_numpy(m)
+
+        # Compute expected result using numpy
+        expected_result = np.linalg.det(np_m) != 0
+
+        # Compute actual result using Matrix class
+        actual_result = m.is_regular
+
+        # Compare results
+        self.assertEqual(actual_result, expected_result)
+
+    def test_is_regular_false(self):
+        """Test a singular (non-invertible) matrix."""
+        # Create test matrix
+        m = Matrix([[1, 2], [2, 4]])
+
+        # Convert to numpy array
+        np_m = matrix_to_numpy(m)
+
+        # Compute expected result using numpy
+        expected_result = np.linalg.det(np_m) != 0
+
+        # Compute actual result using Matrix class
+        actual_result = m.is_regular
+
+        # Compare results
+        self.assertEqual(actual_result, expected_result)
+
+    def test_is_regular_non_square(self):
+        """Test regularity of a non-square matrix."""
+        # Create test matrix
+        m = Matrix([[1, 2, 3], [4, 5, 6]])
+
+        # Non-square matrices are not regular
+        self.assertFalse(m.is_regular)
+
+
 class TestEdgeCases(unittest.TestCase):
     """Test various edge cases."""
 
@@ -620,4 +1069,3 @@ class TestEdgeCases(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
-

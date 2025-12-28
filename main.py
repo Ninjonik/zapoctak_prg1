@@ -4,11 +4,12 @@ Zápočtový program, zimný semester 2025/2026, Programovanie 1.
 Peter Zaťko
 """
 
-from typing import Iterable, Iterator, Tuple, Union, List
 from numbers import Number
+from typing import Iterable, Iterator, Tuple, Union, List
 
 
 class Matrix:
+    # ===== Inicializácia =====
     def __init__(self, data: Iterable[Iterable[Number]]):
         """
         Inicializuje maticu prostredníctvom vstupného 2D listu. Je to ekvivalentné volaniu metódy from_list.
@@ -17,7 +18,6 @@ class Matrix:
         # vytvárame kópiu, aby sme nemali len referenciu
         self._data = [list(row) for row in data]
 
-    # ===== Konštrukcia =====
     @classmethod
     def zeros(cls, m: int, n: int) -> "Matrix":
         """
@@ -79,7 +79,7 @@ class Matrix:
                 out += f" {column}"
             out += " )"
 
-        return out
+        return out if out != "" else "()"
 
     def __repr__(self) -> str:
         return "Matrix(...)"
@@ -157,17 +157,19 @@ class Matrix:
         :return: None.
         """
         if isinstance(key, int):
-            value_list = list(value) # explicitná kópia
+            value_list = list(value)  # explicitná kópia
             if not (1 <= key <= self.rows):
-                raise IndexError(f"Index [{key}] of the row out of range of the matrix with shape {self.rows}*{self.cols}")
+                raise IndexError(
+                    f"Index [{key}] out of the matrix with shape {self.rows}*{self.cols}")
             if len(value_list) != self.cols:
                 raise ValueError(f"Row length mismatch, given: {len(value_list)}, expected: {self.cols}")
-            self._data[key - 1] = value_list # používame indexovanie od 1
+            self._data[key - 1] = value_list  # používame indexovanie od 1
 
         elif isinstance(key, tuple):
             row, col = key
             if not (1 <= row <= self.rows) or not (1 <= col <= self.cols):
-                raise IndexError(f"Index [{row}][{col}] of the row out of range of the matrix with shape {self.rows}*{self.cols}")
+                raise IndexError(
+                    f"Index [{row}][{col}] out of the matrix with shape {self.rows}*{self.cols}")
             self._data[row - 1][col - 1] = value  # používame indexovanie od 1
 
         else:
@@ -195,7 +197,17 @@ class Matrix:
         Upozornenie: Táto operácia je časovo náročná, keďže musí vždy vykonať Gaussovu elimináciu!
         :return: Hodnosť matice.
         """
-        pass
+        if self.empty:
+            return 0
+
+        # vytvor kópiu matice
+        m = self.copy()
+
+        # preveď kópiu na REF
+        m.ref()
+
+        # počet riadkov REF = rank matice
+        return m.rows
 
     @property
     def is_square(self) -> bool:
@@ -229,10 +241,22 @@ class Matrix:
 
     # ===== Interné kontroly =====
     def _check_same_shape(self, other: "Matrix") -> None:
-        pass
+        """
+        Skontroluje, či majú dve matice rovnaký tvar.
+        :param other: Matica na porovnanie.
+        :raises ValueError: Ak matice nemajú rovnaký tvar.
+        """
+        if self.rows != other.rows or self.cols != other.cols:
+            raise ValueError(f"Matrices must have the same shape: {self.shape} vs {other.shape}")
 
     def _check_multipliable(self, other: "Matrix") -> None:
-        pass
+        """
+        Skontroluje, či je možné dve matice vynásobiť.
+        :param other: Matica na porovnanie.
+        :raises ValueError: Ak matice nie je možné vynásobiť.
+        """
+        if self.cols != other.rows:
+            raise ValueError(f"Cannot multiply matrices with shapes {self.shape} and {other.shape}")
 
     # ===== Operácie na matici =====
     def transpose(self) -> None:
@@ -273,7 +297,12 @@ class Matrix:
 
         return empty
 
-    def remove_row(self, row) -> None:
+    def remove_row(self, row) -> "Matrix":
+        """
+        Odstráni riadok z matice.
+        :param row: Index riadku na odstránenie.
+        :return: Referenciu na túto maticu (self) pre reťazenie metód.
+        """
         # posuň všetky riadky zdola nahor
         for move_up_row in range(row + 1, self.rows + 1):
             self[move_up_row - 1] = tuple(self[move_up_row])
@@ -281,17 +310,25 @@ class Matrix:
         # zmenši rozmery matice o prázdny riadok
         self._data = self._data[:self.rows - 1]
 
-    def remove_null_rows(self) -> None:
+        return self
+
+    def remove_null_rows(self) -> "Matrix":
+        """
+        Odstráni všetky nulové riadky z matice.
+        :return: Referenciu na túto maticu (self) pre reťazenie metód.
+        """
         if self.empty:
-            return None
+            return self
 
         empty_rows = 0
         for row in range(1, self.rows + 1):
-            is_empty = self.is_row_empty(row)
+            is_empty = self.is_row_empty(row - empty_rows)
             # posuň všetky riadky zdola nahor
             if is_empty:
+                self.remove_row(row - empty_rows)
                 empty_rows += 1
-                self.remove_row(row)
+
+        return self
 
     def get_pivot(self, row) -> Union[Number, None]:
         if self.empty or row > self.rows:
@@ -310,25 +347,50 @@ class Matrix:
 
         return pivots
 
-    def sort_by_pivots(self) -> None:
+    def sort_by_pivots(self) -> "Matrix":
+        """
+        Zoradí riadky matice podľa pozície pivotov.
+        :return: Referenciu na túto maticu (self) pre reťazenie metód.
+        """
+        if self.empty:
+            return self
+
         pivots = self.get_pivots()
-        # zoraď riadky podľa počtu pivotov
-        for row1 in range(1, self.rows + 1):
-            pivot1 = pivots[row1 - 1]
 
-            for row2 in range(1, self.rows + 1):
-                pivot2 = pivots[row2 - 1]
+        for i in range(self.rows):
+            for j in range(i + 1, self.rows):
 
-                if pivot2 < pivot1:
-                    self.swap_rows(row1, row2)
+                pi = pivots[i]
+                pj = pivots[j]
 
-    def eliminate_pivots(self, base, below = True) -> None:
+                # None považujeme za "nekonečno"
+                if pi is None:
+                    pi = float("inf")
+                if pj is None:
+                    pj = float("inf")
+
+                if pj < pi:
+                    # prehoď pivoty
+                    pivots[i], pivots[j] = pivots[j], pivots[i]
+
+                    # prehoď riadky
+                    self.swap_rows(i + 1, j + 1)
+
+        return self
+
+    def eliminate_rows(self, base, below=True) -> "Matrix":
+        """
+        Eliminuje riadky v matici.
+        :param base: Riadok, ktorý obsahuje pivot.
+        :param below: Ak True, eliminuje pod pivotom, inak nad pivotom.
+        :return: Referenciu na túto maticu (self) pre reťazenie metód.
+        """
         if base > self.rows:
-            return None
+            return self
 
         base_pivot = self.get_pivot(base)
         if not base_pivot:
-            return None
+            return self
 
         pivot = self[base, base_pivot]
 
@@ -346,12 +408,15 @@ class Matrix:
                 secondary_pivot = self.get_pivot(secondary)
                 self.subtract_row(secondary, base, self[secondary, base_pivot] / self[base, base_pivot])
 
-    def ref(self) -> None:
+        return self
+
+    def ref(self) -> "Matrix":
         """
         Prevedie maticu do riadkovo-odstupňovaného tvaru = row echelon form (REF).
+        :return: Referenciu na túto maticu (self) pre reťazenie metód.
         """
         if self.empty:
-            return None
+            return self
 
         # odstráň všetky nulové riadky
         self.remove_null_rows()
@@ -359,30 +424,89 @@ class Matrix:
         # nájdi pivoty pre každý riadok
         pivots = self.get_pivots()
 
-        # zoraď riadky podľa počtu pivotov
+        # zoraď riadky podľa pozície pivotov
         self.sort_by_pivots()
 
         # eliminuj všetky nenulové pozície pod pivotom v aktuálnom riadku
         for row in range(1, self.rows + 1):
-            self.eliminate_pivots(row)
+            self.eliminate_rows(row)
 
-    def rref(self) -> None:
+        # odstráň nulové riadky
+        self.remove_null_rows()
+
+        return self
+
+    def rref(self) -> "Matrix":
         """
         Prevedie maticu do redukovaného riadkovo-odstupňovaného tvaru = reduced row echelon form (RREF).
+        :return: Referenciu na túto maticu (self) pre reťazenie metód.
         """
+
         # preveď maticu do REF
         self.ref()
 
         # eliminuj všetky nenulové pozície nad pivotom v aktuálnom riadku
         for row in range(self.rows, 0, -1):
-            self.eliminate_pivots(row, False)
+            self.eliminate_rows(row, False)
 
+        # odstráň nulové riadky
+        self.remove_null_rows()
+
+        return self
 
     def invert(self) -> "Matrix":
-        pass
+        """
+        Vypočíta inverznú maticu.
+        :return: Nová matica, ktorá je inverzná k pôvodnej matici (nová matica).
+        :raises ValueError: Ak matica nie je regulárna (štvorcová s plnou hodnosťou).
+        """
+        if not self.is_regular:
+            raise ValueError("Matrix is not invertible (not regular)")
+
+        # Vytvoríme rozšírenú maticu [A|I]
+        n = self.rows
+        augmented = Matrix.zeros(n, 2 * n)
+
+        # Na ľavú stranu dáme maticu A
+        for i in range(1, n + 1):
+            for j in range(1, n + 1):
+                augmented[i, j] = self[i, j]
+
+        # Na pravú stranu dáme identitu
+        for i in range(1, n + 1):
+            augmented[i, i + n] = 1
+
+        # Vykonáme G-J elimináciu
+        augmented.rref()
+
+        # Na pravej strane rozšírenej matice je naša požadovaná inverzná matica
+        inverse = Matrix.zeros(n, n)
+        for i in range(1, n + 1):
+            for j in range(1, n + 1):
+                inverse[i, j] = augmented[i, j + n]
+
+        return inverse
 
     def __matmul__(self, other: "Matrix") -> "Matrix":
-        pass
+        """
+        Vynásobí dve matice (maticový súčin).
+        :param other: Druhý činiteľ (matica).
+        :return: Nová matica, ktorá je výsledkom súčinu.
+        """
+        if self.empty or other.empty:
+            return Matrix([])
+
+        self._check_multipliable(other)
+
+        result = Matrix.zeros(self.rows, other.cols)
+        for i in range(1, self.rows + 1):
+            for j in range(1, other.cols + 1):
+                sum_val = 0
+                for k in range(1, self.cols + 1):
+                    sum_val += self[i, k] * other[k, j]
+                result[i, j] = sum_val
+
+        return result
 
     def __eq__(self, other: Union[object, "Matrix"]) -> bool:
         # Ak sa jedná o iný dátový typ
@@ -406,110 +530,173 @@ class Matrix:
 
         return True
 
-
     # ===== Operácie zľava =====
     def __add__(self, other: "Matrix") -> "Matrix":
-        pass
+        """
+        Sčíta dve matice.
+        :param other: Druhá matica na sčítanie.
+        :return: Nová matica, ktorá je výsledkom sčítania.
+        """
+        if self.empty and other.empty:
+            return Matrix([])
+
+        self._check_same_shape(other)
+
+        result = Matrix.zeros(self.rows, self.cols)
+        for row in range(1, self.rows + 1):
+            for col in range(1, self.cols + 1):
+                result[row, col] = self[row, col] + other[row, col]
+
+        return result
 
     def __sub__(self, other: "Matrix") -> "Matrix":
-        pass
+        """
+        Odčíta druhú maticu od prvej.
+        :param other: Druhá matica na odčítanie.
+        :return: Nová matica, ktorá je výsledkom odčítania.
+        """
+        if self.empty and other.empty:
+            return Matrix([])
+
+        self._check_same_shape(other)
+
+        result = Matrix.zeros(self.rows, self.cols)
+        for row in range(1, self.rows + 1):
+            for col in range(1, self.cols + 1):
+                result[row, col] = self[row, col] - other[row, col]
+
+        return result
 
     def __mul__(self, other: Union[Number, "Matrix"]) -> "Matrix":
-        pass
+        """
+        Vynásobí maticu skalárom (skalárny násobok matice).
+        :param other: Skalár.
+        :return: Nová matica, ktorá je výsledkom skalárneho násobku.
+        """
+        if isinstance(other, Number):
+            if self.empty:
+                return Matrix([])
+
+            result = Matrix.zeros(self.rows, self.cols)
+            for row in range(1, self.rows + 1):
+                for col in range(1, self.cols + 1):
+                    result[row, col] = self[row, col] * other
+
+            return result
+        else:
+            # If other is a Matrix, use matrix multiplication
+            return self.__matmul__(other)
 
     # ===== Operácie zprava =====
-    def __radd__(self, other: "Matrix") -> "Matrix":
-        pass
+    def __radd__(self, other: Union[Number, "Matrix"]) -> "Matrix":
+        """
+        Sčíta skalár a maticu (skalár + matica).
+        :param other: Skalár na sčítanie.
+        :return: Nová matica, ktorá je výsledkom sčítania.
+        """
+        if isinstance(other, Number):
+            if self.empty:
+                return Matrix([])
 
-    def __rsub__(self, other: "Matrix") -> "Matrix":
-        pass
+            result = Matrix.zeros(self.rows, self.cols)
+            for row in range(1, self.rows + 1):
+                for col in range(1, self.cols + 1):
+                    result[row, col] = other + self[row, col]
+
+            return result
+        else:
+            # If other is a Matrix, use regular addition
+            return self.__add__(other)
+
+    def __rsub__(self, other: Union[Number, "Matrix"]) -> "Matrix":
+        """
+        Odčíta maticu od skaláru (skalár - matica).
+        :param other: Skalár, od ktorého sa odčíta matica.
+        :return: Nová matica, ktorá je výsledkom odčítania.
+        """
+        if isinstance(other, Number):
+            if self.empty:
+                return Matrix([])
+
+            result = Matrix.zeros(self.rows, self.cols)
+            for row in range(1, self.rows + 1):
+                for col in range(1, self.cols + 1):
+                    result[row, col] = other - self[row, col]
+
+            return result
+        else:
+            # If other is a Matrix, use regular subtraction with reversed operands
+            return other.__sub__(self)
 
     def __rmul__(self, other: Number) -> "Matrix":
-        pass
+        """
+        Vynásobí maticu skalárom (skalárny násobok matice).
+        :param other: Skalár.
+        :return: Nová matica, ktorá je výsledkom skalárneho násobku.
+        """
+        # Scalar multiplication is commutative, so we can use __mul__
+        return self.__mul__(other)
 
     # ===== Elementárne riadkové úpravy (in-place) =====
-    def add_row(self, base: int, operand: int, multiple: Number = 1) -> None:
+    def add_row(self, base: int, operand: int, multiple: Number = 1) -> "Matrix":
         """
         Pripočíta ku riadku destination riadok source.
         :param base: Riadok, ku ktorému sa má pripočítať iný riadok.
         :param operand: Riadok, ktorý budeme pripočívať ku inému riadku.
         :param multiple: Skalár vyjadrujúci násobok riadku source.
-        :return: None
+        :return: Referenciu na túto maticu (self) pre reťazenie metód.
         """
         if self.empty or operand > self.rows or base > self.rows:
-            return None
+            return self
 
         for col in range(1, self.cols + 1):
             self[base, col] += multiple * self[operand, col]
 
-    def subtract_row(self, base: int, operand: int, multiple: Number) -> None:
+        return self
+
+    def subtract_row(self, base: int, operand: int, multiple: Number) -> "Matrix":
         """
         Odpočíta od riadku destination riadok source. Je to ekvivalentné add_row s multiple = -1.
         :param base: Riadok, od ktorého sa má odpočítať iný riadok.
         :param operand: Riadok, ktorý budeme odpočítavať od iného riadku.
         :param multiple: Skalár vyjadrujúci násobok riadku source.
-        :return: None
+        :return: Referenciu na túto maticu (self) pre reťazenie metód.
         """
         return self.add_row(base, operand, -1 * multiple)
 
-    def scale_row(self, base: int, multiple: Number) -> None:
+    def scale_row(self, base: int, multiple: Number) -> "Matrix":
         """
         Vynásobí riadok nenulovým číslom.
         :param base: Riadok, nad ktorým chceme vykonať operáciu.
         :param multiple: Skalár vyjadrujúci násobok riadku source.
-        :return: None
+        :return: Referenciu na túto maticu (self) pre reťazenie metód.
         """
         if self.empty or base > self.rows or multiple == 0:
-            return None
+            return self
 
         for col in range(1, self.cols + 1):
             self[base, col] = multiple * self[base, col]
 
-    def swap_rows(self, base: int, secondary: int) -> None:
+        return self
+
+    def swap_rows(self, base: int, secondary: int) -> "Matrix":
         """
         Vymení pozície dvoch riadkov.
         :param secondary: Index 1. riadku pre výmenu.
         :param base: Index 2. riadku pre výmenu.
-        :return: None
+        :return: Referenciu na túto maticu (self) pre reťazenie metód.
         """
         if self.empty or secondary > self.rows or base > self.rows:
-            return None
+            return self
 
         for col in range(1, self.cols + 1):
             self[secondary, col], self[base, col] = self[base, col], self[secondary, col]
+
+        return self
 
 
 class InputHandler:
     def __init__(self) -> None:
         pass
 
-"""
-symetricka_matica = Matrix([[1, 1, -1], [1, 2, 0], [-1, 0, 5]])
-matica = Matrix([[6, 3, 1], [3, 2, 9], [7, -4, 0]])
-jednotkova_matica=Matrix.identity(4)
-nulova_matica=Matrix.zeros(3, 5)
 
-print(symetricka_matica)
-print(matica)
-print(jednotkova_matica)
-print(nulova_matica)
-
-print(symetricka_matica.shape)
-print(matica.shape)
-print(jednotkova_matica.shape)
-print(nulova_matica.shape)
-
-print(symetricka_matica.is_symmetric)
-print(matica.is_symmetric)
-print(jednotkova_matica.is_symmetric)
-print(nulova_matica.is_symmetric)
-"""
-# Case 2: Matrix with a true zero row
-m2 = Matrix([
-    [1, 1, 1],
-    [0, 0, 0],
-    [0, 1, 2]
-])
-# This will likely raise: TypeError: unsupported operand type(s) for -: 'NoneType' and 'int'
-m2.rref()
-print("Case 2 (Zero Row):\n", m2)

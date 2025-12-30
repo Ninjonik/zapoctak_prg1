@@ -76,7 +76,7 @@ class Matrix:
                 out += "\n"
             out += "("
             for column in row:
-                out += f" {column}"
+                out += f" {round(column, 10)}"
             out += " )"
 
         return out if out != "" else "()"
@@ -330,7 +330,7 @@ class Matrix:
 
         return self
 
-    def get_pivot(self, row) -> Union[Number, None]:
+    def get_pivot(self, row) -> Union[int, None]:
         if self.empty or row > self.rows:
             return None
 
@@ -339,11 +339,11 @@ class Matrix:
             if possible_pivot != 0:
                 return i
 
-    def get_pivots(self) -> List[int]:
+    def get_pivots(self, start_from_one: bool = True) -> List[int]:
         pivots = []
         for row in range(1, self.rows + 1):
             pivot = self.get_pivot(row)
-            pivots.append(pivot - 1)
+            pivots.append(pivot if start_from_one else pivot - 1)
 
         return pivots
 
@@ -355,7 +355,7 @@ class Matrix:
         if self.empty:
             return self
 
-        pivots = self.get_pivots()
+        pivots = self.get_pivots(False)
 
         for i in range(self.rows):
             for j in range(i + 1, self.rows):
@@ -400,12 +400,9 @@ class Matrix:
 
         if below:
             for secondary in range(base + 1, self.rows + 1):
-                secondary_pivot = self.get_pivot(secondary)
-                if secondary_pivot == base_pivot:
-                    self.subtract_row(secondary, base, self[secondary, secondary_pivot] / self[base, base_pivot])
+                self.subtract_row(secondary, base, self[secondary, base_pivot] / self[base, base_pivot])
         else:
             for secondary in range(1, base):
-                secondary_pivot = self.get_pivot(secondary)
                 self.subtract_row(secondary, base, self[secondary, base_pivot] / self[base, base_pivot])
 
         return self
@@ -420,9 +417,6 @@ class Matrix:
 
         # odstráň všetky nulové riadky
         self.remove_null_rows()
-
-        # nájdi pivoty pre každý riadok
-        pivots = self.get_pivots()
 
         # zoraď riadky podľa pozície pivotov
         self.sort_by_pivots()
@@ -453,6 +447,55 @@ class Matrix:
         self.remove_null_rows()
 
         return self
+
+    def get_solutions(self) -> str:
+        self.rref()
+
+        if self.empty:
+            return "Riešením je celé univerzum."
+
+        # 1. Nájdi pozície pivotov
+        pivot_cols = self.get_pivots()
+
+        # 2. Kontrola riešiteľnosti
+        for row in range(1, self.rows + 1):
+            pivot = self.get_pivot(row)
+            if pivot == self.cols: return "Nemá riešenie."
+
+        # 3. Urči voľné premenné
+        num_vars = self.cols - 1
+        all_vars = set(range(1, num_vars + 1))
+        free_vars = sorted(list(all_vars - set(pivot_cols)))
+
+        # 4. Vytvor mapping pivot_col -> row_index
+        pivot_to_row = {}
+        for row_idx in range(1, self.rows + 1):
+            pivot_col = self.get_pivot(row_idx)
+            if pivot_col:
+                pivot_to_row[pivot_col] = row_idx
+
+        # 5. Partikulárne riešenie
+        part_sol = [0.0] * num_vars
+        for p_col in pivot_cols:
+            row_idx = pivot_to_row[p_col]
+            part_sol[p_col - 1] = self[row_idx, self.cols]
+
+        # 6. Báza jadra
+        kernel_base = []
+        for f_col in free_vars:
+            vec = [0.0] * num_vars
+            vec[f_col - 1] = 1.0
+            for p_col in pivot_cols:
+                row_idx = pivot_to_row[p_col]
+                vec[p_col - 1] = -1.0 * self[row_idx, f_col]
+            kernel_base.append(vec)
+
+        # 7. Formátovanie výstupu
+        output = f"Parametrický popis riešení: ({', '.join(str(round(n, 4)) for n in part_sol)})"
+        for i, base in enumerate(kernel_base):
+            output += f" + t{i} * ({', '.join(str(round(n, 4)) for n in base)})"
+        return output
+
 
     def invert(self) -> "Matrix":
         """
@@ -700,3 +743,8 @@ class InputHandler:
         pass
 
 
+# data = [[1, 2, 0, -1, 5],
+#         [0, 0, 1, 3, 2],
+#         [0, 0, 0, 0, 0]]
+# m = Matrix(data)
+# print(m.get_solutions())

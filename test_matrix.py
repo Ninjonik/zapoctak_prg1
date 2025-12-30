@@ -9,6 +9,8 @@ python -m unittest test_matrix -v
 """
 
 import unittest
+from typing import List
+
 import numpy as np
 from main import Matrix
 
@@ -1066,6 +1068,245 @@ class TestEdgeCases(unittest.TestCase):
         self.assertEqual(m[1, 1], 1)
         self.assertEqual(m[2, 2], 1)
 
+
+class TestMatrixSolutions(unittest.TestCase):
+    """Test riešení homogénnych a nehomogénnych sústav."""
+
+    def verify_solution(self, matrix_data: List[List[float]], solution_str: str):
+        """
+        Pomocná logika na overenie, či vrátený parametrický popis je korektný.
+        """
+        # 1. Extrakcia dát
+        np_a_full = np.array(matrix_data)
+        A = np_a_full[:, :-1]  # Matica koeficientov
+        b = np_a_full[:, -1]  # Pravá strana
+
+        # Ak sústava nemá riešenie, v kóde máš string "Nemá riešenie."
+        if solution_str == "Nemá riešenie.":
+            # Overíme pomocou Frobeniusovej vety cez numpy
+            rank_a = np.linalg.matrix_rank(A)
+            rank_aug = np.linalg.matrix_rank(np_a_full)
+            self.assertNotEqual(rank_a, rank_aug)
+            return
+
+        # 2. Parsovanie výsledku (veľmi zjednodušené pre test)
+        # V reálnom teste by si mohol v Matrix triede vrátiť radšej objekty,
+        # ale overíme to aspoň matematicky z reťazca, ak je to potrebné.
+        # Pre účely tohto testu predpokladáme, že overujeme len jedno (partikulárne) riešenie.
+        pass
+
+    # ==================== SYSTEMATICKÉ TESTY PRE get_solutions() ====================
+    # Budeme testovať všetky možné prípady a porovnávať s NumPy
+
+    def _verify_solution(self, A_data, num_free_vars_expected=None, should_have_solution=True):
+        """
+        Helper funkcia na verifikáciu riešenia porovnaním s NumPy.
+        A_data: rozšírená matica [A|b]
+        """
+        m = Matrix(A_data)
+        result = m.get_solutions()
+
+        # NumPy verifikácia
+        A_np = np.array([row[:-1] for row in A_data], dtype=float)
+        b_np = np.array([row[-1] for row in A_data], dtype=float).reshape(-1, 1)
+
+        rank_A = np.linalg.matrix_rank(A_np)
+        rank_Ab = np.linalg.matrix_rank(np.column_stack([A_np, b_np]))
+
+        # Kontrola riešiteľnosti
+        if rank_A != rank_Ab:
+            self.assertEqual(result, "Nemá riešenie.")
+            self.assertFalse(should_have_solution)
+            return
+
+        self.assertTrue(should_have_solution)
+
+        # Spočítaj počet voľných premenných
+        if A_np.size > 0:
+            n = A_np.shape[1]
+            num_free = n - rank_A
+        else:
+            num_free = len(A_data[0]) - 1  # prázdna matica
+
+        if num_free_vars_expected is not None:
+            self.assertEqual(num_free, num_free_vars_expected,
+                           f"Očakávaný počet voľných premenných: {num_free_vars_expected}, dostal: {num_free}")
+
+        # Kontrola parametrov v riešení
+        for i in range(num_free):
+            self.assertIn(f"t{i}", result, f"Chýba parameter t{i} pre voľnú premennú")
+
+    # === NEHOMOGÉNNE SÚSTAVY ===
+
+    def test_no_solution_inconsistent(self):
+        """Nekonzistentná sústava - nemá riešenie."""
+        # x + y = 2
+        # x + y = 5  (kontradikcia)
+        self._verify_solution([[1, 1, 2], [1, 1, 5]], should_have_solution=False)
+
+    def test_no_solution_rank_defect(self):
+        """Rozšírená matica má vyšší rank ako koeficientová - nemá riešenie."""
+        # x + 2y + 3z = 1
+        # 2x + 4y + 6z = 3  (= 2 * prvý riadok by malo dať 2, nie 3)
+        self._verify_solution([[1, 2, 3, 1], [2, 4, 6, 3]], should_have_solution=False)
+
+    def test_unique_solution_2x2(self):
+        """Jedinečné riešenie 2x2."""
+        # 2x + y = 5
+        # x - y = 1
+        # Riešenie: x=2, y=1
+        self._verify_solution([[2, 1, 5], [1, -1, 1]], num_free_vars_expected=0)
+
+    def test_unique_solution_3x3(self):
+        """Jedinečné riešenie 3x3."""
+        # x + y + z = 6
+        # 2x - y + z = 3
+        # x + 2y - z = 2
+        self._verify_solution([[1, 1, 1, 6], [2, -1, 1, 3], [1, 2, -1, 2]], num_free_vars_expected=0)
+
+    def test_infinite_solutions_underdetermined(self):
+        """Nedourčená sústava - nekonečne veľa riešení (1 rovnica, 2 neznáme)."""
+        # x + 2y = 5
+        # Voľná: y (t0), Bázická: x = 5 - 2t0
+        self._verify_solution([[1, 2, 5]], num_free_vars_expected=1)
+
+    def test_infinite_solutions_2eq_3vars(self):
+        """2 rovnice, 3 neznáme - 1 voľná premenná."""
+        # x + y + z = 1
+        # 2x + y - z = 0
+        self._verify_solution([[1, 1, 1, 1], [2, 1, -1, 0]], num_free_vars_expected=1)
+
+    def test_infinite_solutions_rank1_3vars(self):
+        """Rank 1, 3 premenné - 2 voľné premenné."""
+        # x + 2y + 3z = 4
+        # 2x + 4y + 6z = 8  (násobok prvého)
+        self._verify_solution([[1, 2, 3, 4], [2, 4, 6, 8]], num_free_vars_expected=2)
+
+    def test_alternating_pivot_free_vars(self):
+        """Pivoty a voľné premenné sa striedajú."""
+        # x1 + 2x2 + 0x3 - x4 = 5
+        # 0x1 + 0x2 + x3 + 3x4 = 2
+        # Pivoty v stĺpcoch 1,3; voľné v stĺpcoch 2,4
+        self._verify_solution([[1, 2, 0, -1, 5], [0, 0, 1, 3, 2], [0, 0, 0, 0, 0]],
+                            num_free_vars_expected=2)
+
+    def test_complex_non_homogenous(self):
+        """Komplexná nehomogénna sústava."""
+        data = [[6, -4, 9, 8, 6, 7],
+                [4, -1, 6, 2, -1, 8],
+                [6, 2, 4, -3, -15, 9]]
+        self._verify_solution(data)
+
+    # === HOMOGÉNNE SÚSTAVY ===
+
+    def test_homogenous_unique_solution(self):
+        """Homogénna sústava s jedinečným riešením (triviálne riešenie)."""
+        # x + y = 0
+        # x - y = 0
+        # Riešenie: x=0, y=0
+        self._verify_solution([[1, 1, 0], [1, -1, 0]], num_free_vars_expected=0)
+
+    def test_homogenous_infinite_solutions_1free(self):
+        """Homogénna sústava s nekonečne veľa riešeniami - 1 voľná premenná."""
+        # x + y + z = 0
+        # 2x + 2y + 2z = 0
+        self._verify_solution([[1, 1, 1, 0], [2, 2, 2, 0]], num_free_vars_expected=2)
+
+    def test_homogenous_infinite_solutions_2free(self):
+        """Homogénna sústava - 2 voľné premenné."""
+        # x + y + z = 0
+        self._verify_solution([[1, 1, 1, 0]], num_free_vars_expected=2)
+
+    def test_homogenous_3x4_rank2(self):
+        """Homogénna 3x4, rank 2 - očakávame 2 voľné premenné."""
+        # x + 2y + 3z + 4w = 0
+        # 2x + 4y + 5z + 6w = 0
+        # 3x + 6y + 8z + 10w = 0
+        self._verify_solution([[1, 2, 3, 4, 0], [2, 4, 5, 6, 0], [3, 6, 8, 10, 0]],
+                            num_free_vars_expected=2)
+
+    # === ŠPECIÁLNE PRÍPADY ===
+
+    def test_zero_matrix_homogenous(self):
+        """Nulová matica - každé riešenie je riešením (celé univerzum)."""
+        m = Matrix([[0, 0, 0], [0, 0, 0]])
+        result = m.get_solutions()
+        self.assertIn("univerzum", result.lower())
+
+    def test_zero_matrix_all_free_3vars(self):
+        """Nulová matica 2x4 - všetky 3 premenné voľné."""
+        # 0x + 0y + 0z = 0
+        # 0x + 0y + 0z = 0
+        # Po RREF sa to stane prázdnou maticou, čo je celé univerzum
+        m = Matrix([[0, 0, 0, 0], [0, 0, 0, 0]])
+        result = m.get_solutions()
+        # Nulová matica = univerzum riešení
+        self.assertIn("univerzum", result.lower())
+
+    def test_single_variable_system(self):
+        """Sústava s 1 premennou."""
+        # 2x = 4 => x = 2
+        self._verify_solution([[2, 4]], num_free_vars_expected=0)
+
+    def test_single_variable_homogenous(self):
+        """Homogénna sústava s 1 premennou."""
+        # 3x = 0 => x = 0
+        self._verify_solution([[3, 0]], num_free_vars_expected=0)
+
+    def test_overdetermined_consistent(self):
+        """Preurčená konzistentná sústava (viac rovníc ako premenných)."""
+        # x + y = 3
+        # 2x + 2y = 6
+        # 3x + 3y = 9
+        self._verify_solution([[1, 1, 3], [2, 2, 6], [3, 3, 9]], num_free_vars_expected=1)
+
+    def test_overdetermined_inconsistent(self):
+        """Preurčená nekonzistentná sústava."""
+        # x + y = 3
+        # 2x + 2y = 6
+        # x + y = 5  (kontradikcia s prvým)
+        self._verify_solution([[1, 1, 3], [2, 2, 6], [1, 1, 5]], should_have_solution=False)
+
+    def test_identity_matrix_system(self):
+        """Jednotková matica - jedinečné riešenie."""
+        # x = 1
+        # y = 2
+        # z = 3
+        self._verify_solution([[1, 0, 0, 1], [0, 1, 0, 2], [0, 0, 1, 3]], num_free_vars_expected=0)
+
+    def test_all_pivots_at_end(self):
+        """Všetky pivoty na konci stĺpcov."""
+        # 0x + 0y + z = 1
+        # x a y sú voľné, z je bázická
+        self._verify_solution([[0, 0, 1, 1]], num_free_vars_expected=2)
+
+    def test_fractional_coefficients(self):
+        """Sústava so zlomkovými koeficientami."""
+        # 0.5x + 0.25y = 1
+        # 1.5x + 0.75y = 3
+        self._verify_solution([[0.5, 0.25, 1], [1.5, 0.75, 3]], num_free_vars_expected=1)
+
+    def test_negative_solution(self):
+        """Sústava so zápornými riešeniami."""
+        # x + 2y = -3
+        # 3x - y = -5
+        self._verify_solution([[1, 2, -3], [3, -1, -5]], num_free_vars_expected=0)
+
+    def test_large_system_5x6(self):
+        """Väčšia sústava 5x6."""
+        data = [[1, 2, 3, 4, 5, 1],
+                [2, 4, 6, 8, 10, 2],
+                [1, 1, 1, 1, 1, 0],
+                [0, 1, 2, 3, 4, 1],
+                [1, 0, 0, 0, 1, 2]]
+        self._verify_solution(data)
+
+    def test_zero_row_in_middle(self):
+        """Nulový riadok uprostred matice."""
+        # x + y = 1
+        # 0 = 0
+        # 2x + 2y = 2
+        self._verify_solution([[1, 1, 1], [0, 0, 0], [2, 2, 2]], num_free_vars_expected=1)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

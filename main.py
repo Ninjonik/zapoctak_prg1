@@ -761,13 +761,466 @@ class Matrix:
         return self
 
 
-class InputHandler:
-    def __init__(self) -> None:
-        pass
+def show_extended_help():
+    """
+    Zobrazí rozšírenú dokumentáciu s podrobnými príkladmi použitia.
+    """
+    help_text = """
+╔══════════════════════════════════════════════════════════════════════╗
+║          MATICOVÁ KALKULAČKA - Rozšírená dokumentácia                ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+PREHĽAD
+-------
+Maticová kalkulačka je Python knižnica a CLI nástroj pre operácie s maticami.
+Trieda Matrix poskytuje všetky základne aj pokročilé operácie lineárnej algebry.
+
+SPÔSOBY POUŽITIA
+----------------
+
+1. Ako Python knižnica:
+   
+   from main import Matrix
+   
+   m = Matrix([[1, 2], [3, 4]])
+   inv = m.invert()
+   print(inv)
+
+2. Ako interaktívny CLI program:
+   
+   python main.py
+   python main.py --interactive
+
+VYTVÁRANIE MATÍC
+----------------
+
+# Z 2D zoznamu:
+>>> m = Matrix([[1, 2, 3], [4, 5, 6]])
+
+# Nulová matica (3 riadky, 4 stĺpce):
+>>> zeros = Matrix.zeros(3, 4)
+
+# Jednotková matica (4x4):
+>>> identity = Matrix.identity(4)
+
+# Kópia existujúcej matice:
+>>> m2 = Matrix.from_matrix(m)
+
+ZÁKLADNÉ OPERÁCIE
+-----------------
+
+Sčítanie a odčítanie:
+>>> a = Matrix([[1, 2], [3, 4]])
+>>> b = Matrix([[5, 6], [7, 8]])
+>>> c = a + b
+>>> d = a - b
+
+Násobenie:
+>>> e = a @ b          # Maticový súčin
+>>> f = 2 * a          # Skalárny násobok
+>>> g = a * 2          # Funguje aj opačne
+
+Mocnina:
+>>> h = a ** 3         # a @ a @ a
+
+PRÍSTUP K PRVKOM
+----------------
+
+Indexovanie začína od 1 (nie 0)!
+
+>>> m = Matrix([[1, 2, 3], [4, 5, 6]])
+>>> m[1, 2]            # Prvok v 1. riadku, 2. stĺpci -> 2
+>>> m[2]               # Celý 2. riadok -> [4, 5, 6]
+>>> m[1, 2] = 99       # Nastavenie hodnoty
+
+TRANSFORMÁCIE MATICE
+--------------------
+
+>>> m = Matrix([[1, 2], [3, 4]])
+>>> m.transpose()      # Transpozícia (vracia novú maticu)
+>>> m.ref()            # Row Echelon Form
+>>> m.rref()           # Reduced Row Echelon Form
+
+RIEŠENIE LINEÁRNYCH SÚSTAV
+---------------------------
+
+Sústava: x + 2y = 5, 3x + 4y = 11
+
+>>> system = Matrix([[1, 2, 5], [3, 4, 11]])
+>>> solutions = system.get_solutions()
+>>> print(solutions)   # [1.0, 2.0]
+
+INVERZIA MATICE
+---------------
+
+>>> m = Matrix([[1, 2], [3, 4]])
+>>> m_inv = m.invert()
+>>> check = m @ m_inv  # Malo by vyjsť identity matrix
+
+DETERMINANT
+-----------
+
+>>> m = Matrix([[1, 2], [3, 4]])
+>>> det = m.determinant()
+>>> print(det)         # -2.0
+
+VLASTNOSTI MATICE
+-----------------
+
+>>> m.shape            # (počet_riadkov, počet_stĺpcov)
+>>> m.rows             # Počet riadkov
+>>> m.cols             # Počet stĺpcov
+>>> m.rank()           # Hodnosť matice
+>>> m.trace()          # Stopa (súčet diagonálnych prvkov)
+
+BOOLOVSKÉ VLASTNOSTI
+--------------------
+
+>>> m.is_square        # Je štvorcová?
+>>> m.is_regular       # Je regulárna (invertovateľná)?
+>>> m.is_symmetric     # Je symetrická?
+>>> m.empty            # Je prázdna?
+
+ITERÁCIA
+--------
+
+>>> m = Matrix([[1, 2], [3, 4]])
+>>> for row in m:
+...     print(row)     # [1, 2], potom [3, 4]
+
+RIADKOVÉ OPERÁCIE (in-place)
+----------------------------
+
+>>> m.row_add(1, 2, k=3)        # R1 = R1 + 3*R2
+>>> m.row_multiply(1, k=2)      # R1 = 2*R1
+>>> m.row_swap(1, 2)            # Vymeň R1 a R2
+
+PRÍKLADY KOMPLEXNÝCH VÝPOČTOV
+------------------------------
+
+1. Riešenie sústavy rovníc:
+   x + y + z = 6
+   2x - y + z = 3
+   x + 2y - z = 2
+
+   >>> A = Matrix([[1, 1, 1, 6],
+   ...             [2, -1, 1, 3],
+   ...             [1, 2, -1, 2]])
+   >>> solution = A.get_solutions()
+   >>> print(f"x={solution[0]}, y={solution[1]}, z={solution[2]}")
+
+2. Overenie, či je matica invertovateľná:
+   
+   >>> m = Matrix([[1, 2], [2, 4]])
+   >>> if m.is_regular:
+   ...     inv = m.invert()
+   ... else:
+   ...     print("Matica nie je invertovateľná")
+
+3. Gaussova eliminácia krok po kroku:
+   
+   >>> m = Matrix([[2, 1, -1], [1, 3, 2]])
+   >>> ref = m.ref()
+   >>> rref = m.rref()
+   >>> print("REF:", ref)
+   >>> print("RREF:", rref)
+
+ČASTÉ CHYBY
+-----------
+
+1. Indexovanie od 0 namiesto od 1:
+   ✗ m[0, 0]  # Chyba!
+   ✓ m[1, 1]  # Správne
+
+2. Nekompatibilné rozmery pri násobení:
+   >>> a = Matrix.zeros(2, 3)
+   >>> b = Matrix.zeros(2, 2)
+   >>> c = a @ b  # Chyba! Stĺpce a ≠ riadky b
+
+3. Inverzia singulárnej matice:
+   >>> m = Matrix([[1, 1], [2, 2]])
+   >>> m.invert()  # Chyba! Determinant je 0
+
+ĎALŠIE INFORMÁCIE
+-----------------
+
+Pre viac informácií pozri README.md súbor alebo zdrojový kód.
+
+Autor: Peter Zaťko
+Verzia: 1.0
+Rok: 2025
+
+"""
+    print(help_text)
 
 
-# data = [[1, 2, 0, -1, 5],
-#         [0, 0, 1, 3, 2],
-#         [0, 0, 0, 0, 0]]
-# m = Matrix(data)
-# print(m.get_solutions())
+def _parse_matrix_literal(text: str) -> Matrix:
+    """
+    Parse matrix from a Python-like literal: '[[1,2],[3,4]]'
+    Provides custom error messages for interactive QoL.
+    """
+    import ast
+
+    try:
+        obj = ast.literal_eval(text)
+    except Exception as e:
+        raise ValueError(f"Invalid matrix literal. Expected e.g. [[1,2],[3,4]]. Details: {e}") from e
+
+    if not isinstance(obj, list) or any(not isinstance(r, list) for r in obj):
+        raise ValueError("Matrix must be a 2D list, e.g. [[1,2],[3,4]].")
+
+    if len(obj) == 0:
+        return Matrix([])
+
+    n = len(obj[0])
+    if any(len(r) != n for r in obj):
+        raise ValueError("All rows must have the same length.")
+
+    return Matrix(obj)
+
+
+def _interactive_help() -> str:
+    return (
+        "Interactive commands:\n"
+        "  help                      Show this help\n"
+        "  help-usage                 Show extended documentation\n"
+        "  version                    Show version\n"
+        "  exit | quit                Exit interactive mode\n"
+        "\n"
+        "Matrix state:\n"
+        "  set A <matrix>             Set current matrix A, e.g. set A [[1,2],[3,4]]\n"
+        "  show A                     Print current matrix A\n"
+        "  shape A                    Print shape of A\n"
+        "  rank A                     Print rank of A\n"
+        "\n"
+        "Operations (in-place on a copy; A itself is not modified unless stated):\n"
+        "  ref A                      Print REF(A)\n"
+        "  rref A                     Print RREF(A)\n"
+        "  invert A                   Print inverse of A\n"
+        "  solve A                    Treat A as augmented [A|b] and print solution set\n"
+        "\n"
+        "Power-user:\n"
+        "  py                         Drop into Python shell with Matrix and A in scope\n"
+    )
+
+
+def interactive_mode():
+    """
+    Interaktívny režim kalkulačky s custom príkazmi (QoL) + možnosťou prepnúť sa do Pythonu.
+    """
+    print("=" * 70)
+    print("  MATRIX CALC - Interactive mode")
+    print("=" * 70)
+    print("Type 'help' for commands. Type 'py' for raw Python. Type 'exit' to quit.")
+    print()
+
+    state = {"A": None}  # current working matrix
+
+    # Persistent Python environment for the session (so assignments work)
+    env = {"Matrix": Matrix, "A": None}
+
+    def _sync_A():
+        env["A"] = state.get("A")
+
+    def get_mat(name: str) -> Matrix:
+        m = state.get(name)
+        if m is None:
+            raise ValueError(f"No matrix '{name}' set. Use: set {name} [[...],[...]]")
+        return m
+
+    def _run_python(line: str) -> bool:
+        """
+        Try to run the line as Python (expression or statement).
+        Returns True if it was handled as Python, False if it's not valid Python.
+        """
+        try:
+            # First try expression (so `2+2` prints `4`)
+            code_obj = compile(line, "<interactive>", "eval")
+        except SyntaxError:
+            try:
+                code_obj = compile(line, "<interactive>", "exec")
+            except SyntaxError:
+                return False
+            else:
+                exec(code_obj, env, env)
+                # if user assigned A manually, mirror it back into state for commands
+                if env.get("A") is not None:
+                    state["A"] = env.get("A")
+                return True
+        else:
+            result = eval(code_obj, env, env)
+            if result is not None:
+                print(result)
+            # mirror A changes if expression returns/sets it indirectly
+            if env.get("A") is not None:
+                state["A"] = env.get("A")
+            return True
+
+    while True:
+        try:
+            line = input("matrix> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            break
+
+        if not line:
+            continue
+
+        # command parsing (only triggers on known commands)
+        cmd, *rest = line.split(maxsplit=2)
+        cmd_l = cmd.lower()
+
+        try:
+            if cmd_l in {"exit", "quit"}:
+                break
+
+            if cmd_l == "help":
+                print(_interactive_help())
+                continue
+
+            if cmd_l == "help-usage":
+                show_extended_help()
+                continue
+
+            if cmd_l == "version":
+                print("Matrix Calculator 1.0 - Peter Zaťko, 2025")
+                continue
+
+            if cmd_l == "set":
+                if len(rest) < 2:
+                    raise ValueError("Usage: set A [[1,2],[3,4]]")
+                name = rest[0]
+                literal = rest[1]
+                state[name] = _parse_matrix_literal(literal)
+                if name == "A":
+                    _sync_A()
+                print(f"OK: set {name} with shape {state[name].shape}")
+                continue
+
+            if cmd_l == "show":
+                if len(rest) < 1:
+                    raise ValueError("Usage: show A")
+                m = get_mat(rest[0])
+                print(m)
+                continue
+
+            if cmd_l == "shape":
+                if len(rest) < 1:
+                    raise ValueError("Usage: shape A")
+                m = get_mat(rest[0])
+                print(m.shape)
+                continue
+
+            if cmd_l == "rank":
+                if len(rest) < 1:
+                    raise ValueError("Usage: rank A")
+                m = get_mat(rest[0])
+                print(m.rank())
+                continue
+
+            if cmd_l in {"ref", "rref", "invert", "solve"}:
+                if len(rest) < 1:
+                    raise ValueError(f"Usage: {cmd_l} A")
+                m = get_mat(rest[0]).copy()
+                if cmd_l == "ref":
+                    print(m.ref())
+                elif cmd_l == "rref":
+                    print(m.rref())
+                elif cmd_l == "invert":
+                    print(m.invert())
+                elif cmd_l == "solve":
+                    print(m.get_solutions())
+                continue
+
+            if cmd_l == "py":
+                import code
+                _sync_A()
+                banner = (
+                    "Python shell (power-user)\n"
+                    "- Matrix class available as Matrix\n"
+                    "- Current matrix A available as A (may be None)\n"
+                    "Exit with Ctrl-D / exit() / quit()\n"
+                )
+                code.interact(local=env, banner=banner)
+                # after returning, resync state from env
+                state["A"] = env.get("A")
+                continue
+
+            # Fallback: run as normal Python
+            _sync_A()
+            if _run_python(line):
+                continue
+
+            # Not a known command and not valid Python => unknown command
+            print(f"Unknown command: {cmd}. Type 'help'.")
+
+        except Exception as e:
+            print(f"Error: {e}")
+
+
+def main():
+    """
+    CLI rozhranie pre maticovú kalkulačku.
+    Program podporuje interaktívny režim aj priame volania operácií.
+    """
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(
+        prog='matrix_calc',
+        description='Maticová kalkulačka pre lineárnu algebru',
+        epilog='Pre interaktívny režim spustite bez argumentov alebo použite --interactive',
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+
+    parser.add_argument('--interactive', '-i', action='store_true',
+                        help='Spustí interaktívny režim s nápovedou a príkladmi')
+    parser.add_argument('--version', '-v', action='version',
+                        version='Matrix Calculator 1.0 - Peter Zaťko, 2025')
+    parser.add_argument('--help-usage', action='store_true',
+                        help='Zobrazí rozšírenú dokumentáciu s príkladmi použitia')
+
+    # minimal subcommands without removing the current UX
+    sub = parser.add_subparsers(dest="cmd")
+
+    p_ref = sub.add_parser("ref", help="Vypíše REF(A).")
+    p_ref.add_argument("A", help="Matica ako literál, napr. '[[1,2],[3,4]]'.")
+
+    p_rref = sub.add_parser("rref", help="Vypíše RREF(A).")
+    p_rref.add_argument("A", help="Matica ako literál, napr. '[[1,2],[3,4]]'.")
+
+    p_inv = sub.add_parser("invert", help="Vypíše inverznú maticu (ak existuje).")
+    p_inv.add_argument("A", help="Štvorcová matica ako literál, napr. '[[1,2],[3,4]]'.")
+
+    p_solve = sub.add_parser("solve", help="Rieši sústavu zo zadanej rozšírenej matice [A|b].")
+    p_solve.add_argument("Ab", help="Rozšírená matica ako literál, napr. '[[1,2,5],[3,4,11]]'.")
+
+    args = parser.parse_args()
+
+    if args.help_usage:
+        show_extended_help()
+        return
+
+    if args.interactive or len(sys.argv) == 1:
+        interactive_mode()
+        return
+
+    if args.cmd == "ref":
+        print(_parse_matrix_literal(args.A).ref())
+        return
+    if args.cmd == "rref":
+        print(_parse_matrix_literal(args.A).rref())
+        return
+    if args.cmd == "invert":
+        print(_parse_matrix_literal(args.A).invert())
+        return
+    if args.cmd == "solve":
+        print(_parse_matrix_literal(args.Ab).get_solutions())
+        return
+
+    parser.print_help()
+
+
+if __name__ == "__main__":
+    main()
+

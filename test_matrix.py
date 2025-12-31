@@ -1082,7 +1082,7 @@ class TestMatrixSolutions(unittest.TestCase):
         b = np_a_full[:, -1]  # Pravá strana
 
         # Ak sústava nemá riešenie, v kóde máš string "Nemá riešenie."
-        if solution_str == "Nemá riešenie.":
+        if solution_str == "No solution.":
             # Overíme pomocou Frobeniusovej vety cez numpy
             rank_a = np.linalg.matrix_rank(A)
             rank_aug = np.linalg.matrix_rank(np_a_full)
@@ -1115,7 +1115,7 @@ class TestMatrixSolutions(unittest.TestCase):
 
         # Kontrola riešiteľnosti
         if rank_A != rank_Ab:
-            self.assertEqual(result, "Nemá riešenie.")
+            self.assertEqual(result, "No solution.")
             self.assertFalse(should_have_solution)
             return
 
@@ -1231,7 +1231,7 @@ class TestMatrixSolutions(unittest.TestCase):
         """Nulová matica - každé riešenie je riešením (celé univerzum)."""
         m = Matrix([[0, 0, 0], [0, 0, 0]])
         result = m.get_solutions()
-        self.assertIn("univerzum", result.lower())
+        self.assertIn("domain", result.lower())
 
     def test_zero_matrix_all_free_3vars(self):
         """Nulová matica 2x4 - všetky 3 premenné voľné."""
@@ -1241,7 +1241,7 @@ class TestMatrixSolutions(unittest.TestCase):
         m = Matrix([[0, 0, 0, 0], [0, 0, 0, 0]])
         result = m.get_solutions()
         # Nulová matica = univerzum riešení
-        self.assertIn("univerzum", result.lower())
+        self.assertIn("domain", result.lower())
 
     def test_single_variable_system(self):
         """Sústava s 1 premennou."""

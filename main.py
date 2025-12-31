@@ -1,5 +1,5 @@
 """
-Jednoduchá kalkulačka na lineárnu algebru.
+Jednoduchá maticová kalkulačka na lineárnu algebru.
 Zápočtový program, zimný semester 2025/2026, Programovanie 1.
 Peter Zaťko
 """
@@ -15,7 +15,7 @@ class Matrix:
         Inicializuje maticu prostredníctvom vstupného 2D listu. Je to ekvivalentné volaniu metódy from_list.
         :param data: 2D list
         """
-        # vytvárame kópiu, aby sme nemali len referenciu
+        # vytvárame úplnú kópiu dát, aby sme nemali len referenciu
         self._data = [list(row) for row in data]
 
     @classmethod
@@ -37,7 +37,8 @@ class Matrix:
         :param n: počet riadkov a počet stĺpcov
         :return: Zinicializovaná matica
         """
-        # všade 0 okrem prípadu kedy row = col (podľa definície jednotkovej matice)
+        # všade 0
+        # okrem prípadu, kedy row = col, vtedy 1 (podľa definície jednotkovej matice)
         data = [[(1 if row == col else 0) for col in range(n)] for row in range(n)]
         return cls(data)
 
@@ -57,8 +58,7 @@ class Matrix:
         :param other: existujúca matica
         :return: nová, nezávislá matica
         """
-        # deep copy of the data
-        new_data = [row[:] for row in other._data]  # shallow copy
+        new_data = [row[:] for row in other._data]  # kópia dát matice
         return cls(new_data)
 
     # ===== Reprezentácia =====
@@ -69,6 +69,8 @@ class Matrix:
         """
         out = ""
         first = True
+        # vypíše obsah matice v štandardnom čítateľnom formáte
+        # každý riadok v zátvorkách, hodnoty oddelené medzerou
         for row in self:
             if first:
                 first = False
@@ -82,7 +84,7 @@ class Matrix:
         return out if out != "" else "()"
 
     def __repr__(self) -> str:
-        return "Matrix(...)"
+        return f"Matrix(\n{self.__str__()}\n)"
 
     # ===== Dáta =====
     @property
@@ -187,6 +189,10 @@ class Matrix:
             yield tuple(row)  # immutable row
 
     def copy(self) -> "Matrix":
+        """
+        Vytvorí novú maticu ako kópiu tej aktuálnej.
+        :return: Nová matica, ktorá je kópiou pôvodnej matice.
+        """
         new_matrix = Matrix.from_matrix(self)
         return new_matrix
 
@@ -249,7 +255,7 @@ class Matrix:
         if self.rows != other.rows or self.cols != other.cols:
             raise ValueError(f"Matrices must have the same shape: {self.shape} vs {other.shape}")
 
-    def _check_multipliable(self, other: "Matrix") -> None:
+    def _check_multiplication(self, other: "Matrix") -> None:
         """
         Skontroluje, či je možné dve matice vynásobiť.
         :param other: Matica na porovnanie.
@@ -272,7 +278,7 @@ class Matrix:
             ( 3 6 )
         """
 
-        if self.is_regular:
+        if self.is_square:
             for row in range(1, self.rows + 1):
                 # row + 1, aby sme zabránili dvojitému prehadzovaniu
                 for col in range(row + 1, self.cols + 1):
@@ -286,6 +292,11 @@ class Matrix:
             self._data = new_data
 
     def is_row_empty(self, row) -> bool:
+        """
+        Zistí, či je daný riadok matice nulový - prázdny.
+        :param row: Riadok, ktorý chceme testovať.
+        :return: Pravdivostná hodnota typu bool.
+        """
         if self.empty or row < 1 or row > self.rows:
             return False
 
@@ -301,7 +312,6 @@ class Matrix:
         """
         Odstráni riadok z matice.
         :param row: Index riadku na odstránenie.
-        :return: Referenciu na túto maticu (self) pre reťazenie metód.
         """
         # posuň všetky riadky zdola nahor
         for move_up_row in range(row + 1, self.rows + 1):
@@ -315,7 +325,6 @@ class Matrix:
     def remove_null_rows(self) -> "Matrix":
         """
         Odstráni všetky nulové riadky z matice.
-        :return: Referenciu na túto maticu (self) pre reťazenie metód.
         """
         if self.empty:
             return self
@@ -331,6 +340,11 @@ class Matrix:
         return self
 
     def get_pivot(self, row) -> Union[int, None]:
+        """
+        Získa pozíciu pivotu v danom riadku matice. 0 znamená, že pivot neexistuje.
+        :param row: Riadok matice, v ktorom chceme nájsť pivot.
+        :return: Pozícia pivotu (index stĺpca) v danom riadku alebo None, ak je matica prázdna alebo riadok neexistuje.
+        """
         if self.empty or row > self.rows:
             return None
 
@@ -340,6 +354,11 @@ class Matrix:
                 return i
 
     def get_pivots(self, start_from_one: bool = True) -> List[int]:
+        """
+        Získa pozície pivotov v jednotlivých riadkoch matice.
+        :param start_from_one: Či má indexovanie pivotov začínať od 1 (default), alebo od 0.
+        :return: Zoznam pozícií pivotov v jednotlivých riadkoch.
+        """
         pivots = []
         for row in range(1, self.rows + 1):
             pivot = self.get_pivot(row)
@@ -452,35 +471,34 @@ class Matrix:
         self.rref()
 
         if self.empty:
-            return "Riešením je celé univerzum."
+            return "Solution is the entire domain."
 
-        # 1. Nájdi pozície pivotov
         pivot_cols = self.get_pivots()
 
-        # 2. Kontrola riešiteľnosti
+        # Riešiteľnosť
         for row in range(1, self.rows + 1):
             pivot = self.get_pivot(row)
-            if pivot == self.cols: return "Nemá riešenie."
+            if pivot == self.cols: return "No solution."
 
-        # 3. Urči voľné premenné
+        # Voľné premenné
         num_vars = self.cols - 1
         all_vars = set(range(1, num_vars + 1))
         free_vars = sorted(list(all_vars - set(pivot_cols)))
 
-        # 4. Vytvor mapping pivot_col -> row_index
+        # Bijekcia pivot_col -> row_index (pivot -> riadok)
         pivot_to_row = {}
         for row_idx in range(1, self.rows + 1):
             pivot_col = self.get_pivot(row_idx)
             if pivot_col:
                 pivot_to_row[pivot_col] = row_idx
 
-        # 5. Partikulárne riešenie
+        # Špecifické riešenie
         part_sol = [0.0] * num_vars
         for p_col in pivot_cols:
             row_idx = pivot_to_row[p_col]
             part_sol[p_col - 1] = self[row_idx, self.cols]
 
-        # 6. Báza jadra
+        # Báza jadra (báza ker)
         kernel_base = []
         for f_col in free_vars:
             vec = [0.0] * num_vars
@@ -490,8 +508,8 @@ class Matrix:
                 vec[p_col - 1] = -1.0 * self[row_idx, f_col]
             kernel_base.append(vec)
 
-        # 7. Formátovanie výstupu
-        output = f"Parametrický popis riešení: ({', '.join(str(round(n, 4)) for n in part_sol)})"
+        # Výstup
+        output = f"Parametrized solution set: ({', '.join(str(round(n, 4)) for n in part_sol)})"
         for i, base in enumerate(kernel_base):
             output += f" + t{i} * ({', '.join(str(round(n, 4)) for n in base)})"
         return output
@@ -515,7 +533,7 @@ class Matrix:
             for j in range(1, n + 1):
                 augmented[i, j] = self[i, j]
 
-        # Na pravú stranu dáme identitu
+        # Na pravú stranu dáme jednotkovú maticu
         for i in range(1, n + 1):
             augmented[i, i + n] = 1
 
@@ -539,7 +557,7 @@ class Matrix:
         if self.empty or other.empty:
             return Matrix([])
 
-        self._check_multipliable(other)
+        self._check_multiplication(other)
 
         result = Matrix.zeros(self.rows, other.cols)
         for i in range(1, self.rows + 1):
@@ -552,6 +570,11 @@ class Matrix:
         return result
 
     def __eq__(self, other: Union[object, "Matrix"]) -> bool:
+        """
+        Porovná dve matice, či sú rovnaké vo všetkých zložkách.
+        :param other: Matica, ktorú chceme porovnať s tou aktuálnou.
+        :return: Pravdivostná hodnota typu bool.
+        """
         # Ak sa jedná o iný dátový typ
         if not isinstance(other, Matrix):
             # Ak je matica prázdna, tak to budeme brať ako ekvivalentné hodnote None

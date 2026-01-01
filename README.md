@@ -70,7 +70,7 @@ print(A.invert())
 print((A @ A.invert()))
 ```
 
-Poznámka: indexovanie je **od 1** (matematický štýl):
+Poznámka: indexovanie je **od 1**:
 ```python
 A[1, 1]  # prvok v 1. riadku a 1. stĺpci
 A[2]     # celý 2. riadok ako tuple

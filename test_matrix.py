@@ -41,7 +41,7 @@ class TestMatrixConstruction(unittest.TestCase):
         self.assertEqual(m[2, 3], 6)
 
     def test_zeros(self):
-        """Test zeros matrix creation."""
+        """Test zeros matrix creation"""
         m = Matrix.zeros(3, 4)
         self.assertEqual(m.rows, 3)
         self.assertEqual(m.cols, 4)

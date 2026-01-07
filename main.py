@@ -1,6 +1,7 @@
 """
 Jednoduchá maticová kalkulačka na lineárnu algebru.
 Zápočtový program, zimný semester 2025/2026, Programovanie 1.
+
 Peter Zaťko
 """
 

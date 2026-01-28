@@ -8,8 +8,6 @@ Programovanie 1
 
 ## 1. Úvod
 
-Tento dokument slúži ako sprievodná dokumentácia k zápočtovému programu zameranému na implementáciu triedy `Matrix`. Cieľom programu je poskytnúť jednoduchý nástroj na prácu s maticami, ktorý podporuje základné maticové operácie a riešenie sústav lineárnych rovníc.
-
 ### 1.1. Zadanie
 
 Jadrom celého programu je jedna trieda `Matrix`, ktorá reprezentuje maticu a umožňuje na nej vykonávať množstvo základných operácií. 

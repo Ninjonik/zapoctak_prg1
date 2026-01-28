@@ -12,7 +12,6 @@ python -m unittest test_matrix -v
 """
 
 import unittest
-from typing import List
 
 import numpy as np
 from main import Matrix
@@ -733,7 +732,8 @@ class TestMatrixRegularity(unittest.TestCase):
 
         np_m = matrix_to_numpy(m)
 
-        expected_result = np.linalg.det(np_m) != 0
+        # A matrix is regular if it's square and has full rank (rank equals dimension)
+        expected_result = np_m.shape[0] == np_m.shape[1] and np.linalg.matrix_rank(np_m) == np_m.shape[0]
 
         actual_result = m.is_regular
 
@@ -745,7 +745,7 @@ class TestMatrixRegularity(unittest.TestCase):
 
         np_m = matrix_to_numpy(m)
 
-        expected_result = np.linalg.det(np_m) != 0
+        expected_result = np_m.shape[0] == np_m.shape[1] and np.linalg.matrix_rank(np_m) == np_m.shape[0]
 
         actual_result = m.is_regular
 

@@ -1,23 +1,26 @@
-# Dokumentácia zápočtového programu
+# Dokumentácia k zápočtovému programu: Maticová kalkulačka
 
-**Maticová kalkulačka**  
 Peter Zaťko  
-Programovanie 1 (NPRG030)  
-Zimný semester 2025/2026
+Zimný semester 2025/26  
+Programovanie 1
 
 ---
 
-## Stručné zadanie
+## 1. Úvod
 
-Program implementuje prácu s reálnymi maticami – od základnej aritmetiky cez transpozíciu až po Gaussovu a Gauss-Jordanovu elimináciu. Hlavná trieda `Matrix` dokáže maticu previesť do REF/RREF, vypočítať jej hodnosť, inverznú maticu (ak existuje) a vyriešiť sústavu lineárnych rovníc zadanú rozšírenou maticou.
+Tento dokument slúži ako sprievodná dokumentácia k zápočtovému programu zameranému na implementáciu triedy `Matrix`. Cieľom programu je poskytnúť jednoduchý nástroj na prácu s maticami, ktorý podporuje základné maticové operácie a riešenie sústav lineárnych rovníc.
 
-Program sa dá použiť ako knižnica, ale obsahuje aj jednoduché konzolové menu, ktoré funguje ako demo hlavných funkcionalít.
+### 1.1. Zadanie
 
----
+Jadrom celého programu je jedna trieda `Matrix`, ktorá reprezentuje maticu a umožňuje na nej vykonávať množstvo základných operácií. 
+Medzi podporované funkcionality patrí vytváranie matíc, 
+aritmetické operácie (sčítanie, odčítanie, násobenie),
+transpozícia, hľadanie inverznej matice a riešenie sústav lineárnych rovníc pomocou 
+Gaussovej a Gauss-Jordanovej eliminácie.
 
-## Zadanie
+### 1.2. Presné zadanie
 
-### Čo program dokáže
+Program umožňuje:
 
 **Vytváranie matíc:**
 - Z 2D poľa (zoznamu) `list[list[Number]]` pomocou konštruktora `Matrix(data)`
@@ -71,10 +74,9 @@ Program sa dá použiť ako knižnica, ale obsahuje aj jednoduché konzolové me
 - `swap_rows(i, j)` – výmena riadkov (in-place, vracia `self` pre reťazenie)
 - `is_row_empty(row)` – test, či je riadok nulový
 - `__eq__` – porovnanie matíc
-
 ---
 
-## Ako program používať
+## 2. Ako program používať
 
 ### Spustenie
 
@@ -395,7 +397,7 @@ Ukončí program.
 
 ---
 
-## Reprezentácia výstupu
+## 3. Reprezentácia výstupu
 
 ### Výpis matice
 
@@ -406,7 +408,7 @@ Matice sa vypisujú po riadkoch v zátvorkách:
 ( 4.0 5.0 6.0 )
 ```
 
-Hodnoty sú zaokrúhlené na 10 desatinných miest pri výpise, ale vnútorne sa nezaokrúhľujú (môžu sa hromadiť chyby z floating-point aritmetiky).
+Hodnoty sú zaokrúhlené na 10 desatinných miest pri výpise, ale vnútorne sa nezaokrúhľujú (môže nastať problém kvôli floating-point aritmetike).
 
 ### Riešenie sústavy
 
@@ -416,11 +418,18 @@ Hodnoty sú zaokrúhlené na 10 desatinných miest pri výpise, ale vnútorne sa
 - **"Solution is the entire domain."** – degenerovaný prípad
 - **"Parametrized solution set: (a, b, ...) + t0 * (c, d, ...) + t1 * (e, f, ...) + ..."** – parametrický zápis
 
-Príklad: `(1.0, 2.0) + t0 * (3.0, -1.0)` znamená `x = 1 + 3t₀`, `y = 2 - t₀`.
-
 ---
 
-## Algoritmy
+## 4. Algoritmy a dátové štruktúry
+
+**Dátová štruktúra matice:**
+Hlavnou dátovou štruktúrou je trieda `Matrix`. 
+Samotné dáta matice sú uložené ako 2D zoznam (zoznam zoznamov), 
+kde každý vnútorný zoznam reprezentuje jeden riadok matice. 
+
+**Maticový súčin:** Použitý bol štandardný algoritmus s časovou zložitosťou O(n³).
+
+
 
 ### Gaussova eliminácia – `ref()`
 
@@ -464,7 +473,9 @@ Vstup: rozšírená matica `(A|b)`
 
 ---
 
-## Štruktúra programu
+## 5. Štruktúra programu
+
+Podrobnejšiu dokumentáciu následne obsahujú popisy funkcií v samotnom programe. Tu je iba základný prehľad.
 
 ### Súbory
 
@@ -483,7 +494,7 @@ Vstup: rozšírená matica `(A|b)`
 
 ### Hlavné metódy v `Matrix`
 
-#### Konštruktory a kopírovanie
+#### Vytváranie matice
 
 - **`__init__(data: Iterable[Iterable[Number]])`** 
   - Hlavný konštruktor. Vytvára maticu z 2D poľa (zoznamu zoznamov). Vnútorne konvertuje na tuple pre nemennosť riadkov.
@@ -506,7 +517,7 @@ Vstup: rozšírená matica `(A|b)`
 - **`copy() -> Matrix`** 
   - Vytvorí novú hlbokú kópiu aktuálnej matice.
 
-#### Properties (vlastnosti matice)
+#### Vlastnosti - properties
 
 - **`.rows: int`** – Počet riadkov matice.
 
@@ -522,7 +533,9 @@ Vstup: rozšírená matica `(A|b)`
 
 - **`.is_symmetric: bool`** – Či je matica symetrická (platí A = A^T).
 
-#### Indexovanie a iterácia
+#### Reprezentácia, indexovanie a iterácia
+
+**Vždy, keď sa pristupuje k dátam, tak sa používa indexovanie od 1.**
 
 - **`__str__() -> str`** – Vráti čitateľnú reprezentáciu matice v štandardnom tvare.
   - Každý riadok v zátvorkách, hodnoty zaokrúhlené na 10 desatinných miest.
@@ -644,7 +657,7 @@ Vstup: rozšírená matica `(A|b)`
 
 ---
 
-## Testovanie
+## 6. Testovanie, unit testy
 
 Spustenie testov:
 
@@ -667,7 +680,7 @@ Testujú sa postupne (nie nutne v tomto poradí):
 
 ---
 
-## Možné rozšírenia do budúcna (ak bude čas a vôľa)
+## 7. Možné rozšírenia do budúcna (ak bude čas a vôľa)
 
 **Lepší input handling:**
 - Validácia počtu zadaných čísel
@@ -687,7 +700,7 @@ Testujú sa postupne (nie nutne v tomto poradí):
 
 ---
 
-## Ako sa na tomto projekte pracovalo?
+## 8. Ako sa na projekte pracovalo?
 
 Nebudem klamať, projekt bol náročnejší ako som spočiatku predpokladal. Bolo potrebné definovať pomerne veľké množstvo nielen hlavných metód, ktoré sú to hlavné, čo nás zaujíma (ako napríklad G-J eliminácia), ale aj ďalšie množstvo rôznych helper funkcií, bez ktorých by bol kód veľmi neprehľadný a často by sa opakoval.
 Na záver sa ukázalo, že písanie aj pomerne stručnej dokumentácie k jednotlivým metódam zaberie dosť času.
@@ -698,7 +711,7 @@ Gaussova eliminácia bola zo všetkých algoritmov určite najzložitejšia čas
 
 ---
 
-## Záver
+## 9. Záver
 
 Program síce nebol mojim prvým veľkým projektom v Pythone, ale určite to bol môj prvý projekt, kde som sa snažil použiť trochu viac "advanced" OOP princípy, typy (bol som na nich zvyknutý z TypeScriptu a mám rád IntelliSense) a tiež princípy TDD - Test Driven Developmentu, teda najprv som sa pokúšal si písať k funkciám unit-testy a až potom k nim písať implementáciu. Toto vyžadovalo aj to, aby som si na začiatku vývoja v podstate už rovno definoval všetky funkcie, ktoré som plánoval implementovať, čo určite pomohlo celkovej štruktúre kódu, ktorá je, podľa môjho názoru, celkom dobre zmáknutá.
 
